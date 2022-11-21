@@ -1,76 +1,91 @@
-import time
+from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
+import sqlite3
 
-class Review:
+class Page:
 
-    def __init__(self, div):
-        self.div = div
-        self.user = self.User(self._user_div)
-
-    @property
-    def _article(self):
-        return self.div.find('article')
+    def __init__(self, url):
+        self.url = url
 
     @property
-    def _user_div(self):
-        return self._article.find('div', {'class': 'styles_consumerDetailsWrapper__p2wdr'})
+    def _soup(self):
+        page = requests.get(self.url).content
+        return BeautifulSoup(page)
 
     @property
-    def _section(self):
-        return self._article.find('section')
+    def _review_divs(self):
+        return self._soup.find_all('div', {'class': 'styles_cardWrapper__LcCPA styles_show__HUXRb styles_reviewCard__9HxJJ'})
 
     @property
-    def rate(self):
-        return int(self._section.find('img')['alt'][6])
+    def reviews(self):
+        return [self.Review(div) for div in self._review_divs]
 
-    @property
-    def title(self):
-        return self._section.find('a').text
+    class Review:
 
-    @property
-    def url(self):
-        return 'uk.trustpilot.com' + self._section.find('a').get('href')
-
-    @property
-    def description(self):
-        return self._section.find('p', {'data-service-review-text-typography': 'true'}).text
-
-    @property
-    def date_of_experience(self):
-        return self._section.find('p', {'data-service-review-date-of-experience-typography': 'true'}).text[20:]
-
-    class User:
         def __init__(self, div):
-            self._div = div
+            self.div = div
+            self.user = self.User(self._user_div)
+
+        @property
+        def _article(self):
+            return self.div.find('article')
+
+        @property
+        def _user_div(self):
+            return self._article.find('div', {'class': 'styles_consumerDetailsWrapper__p2wdr'})
+
+        @property
+        def _section(self):
+            return self._article.find('section')
+
+        @property
+        def rate(self):
+            return int(self._section.find('img')['alt'][6])
+
+        @property
+        def title(self):
+            return self._section.find('a').text
 
         @property
         def url(self):
-            return 'uk.trustpilot.com' + self._div.find('a').get('href')
+            return 'uk.trustpilot.com' + self._section.find('a').get('href')
 
         @property
-        def name(self):
-            return self._div.find('a').find('span').text
+        def description(self):
+            return self._section.find('p', {'data-service-review-text-typography': 'true'}).text
 
         @property
-        def reviews_count(self):
-            return self._div.find('div', {'class': 'styles_consumerExtraDetails__fxS4S'}).find('span').text.split(' ')[0]
+        def date_of_experience(self):
+            date_string = self._section.find('p', {'data-service-review-date-of-experience-typography': 'true'}).text[20:]
+            date_object = datetime.strptime(date_string, '%d %B %Y')
+            return datetime.strftime(date_object, '%Y-%m-%d')
 
-        @property
-        def location(self):
-            return self._div.find('div', {'class': 'styles_consumerExtraDetails__fxS4S'}).find('div').text
+        class User:
+            def __init__(self, div):
+                self._div = div
 
-    
+            @property
+            def url(self):
+                return 'uk.trustpilot.com' + self._div.find('a').get('href')
+
+            @property
+            def name(self):
+                return self._div.find('a').find('span').text
+
+            @property
+            def reviews_count(self):
+                return self._div.find('div', {'class': 'styles_consumerExtraDetails__fxS4S'}).find('span').text.split(' ')[0]
+
+            @property
+            def location(self):
+                return self._div.find('div', {'class': 'styles_consumerExtraDetails__fxS4S'}).find('div').text
+
+
 if __name__ == '__main__':
 
-    URL = 'https://uk.trustpilot.com/review/inpost.co.uk?languages=all'
+    URL = 'https://uk.trustpilot.com/review/inpost.co.uk?languages=all&page=%s'
 
-    page = requests.get(URL).content
-    soup = BeautifulSoup(page)
+    number_of_pages = 100
 
-    for i in soup.find_all('div', {'class': 'styles_cardWrapper__LcCPA styles_show__HUXRb styles_reviewCard__9HxJJ'}):
-    
-        r = Review(i)
-        print(r.date_of_experience)
-    
-        break
+    pages = {page_no: Page(URL % page_no) for page_no in range(1, number_of_pages+1)}
