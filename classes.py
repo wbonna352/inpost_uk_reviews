@@ -11,7 +11,7 @@ class Page:
     @property
     def _soup(self):
         page = requests.get(self.url).content
-        return BeautifulSoup(page)
+        return BeautifulSoup(page, 'html.parser')
 
     @property
     def _review_divs(self):
@@ -53,6 +53,7 @@ class Page:
 
         @property
         def description(self):
+            # TODO AttributeError fix
             return self._section.find('p', {'data-service-review-text-typography': 'true'}).text
 
         @property
@@ -81,11 +82,40 @@ class Page:
             def location(self):
                 return self._div.find('div', {'class': 'styles_consumerExtraDetails__fxS4S'}).find('div').text
 
+        def insert_into_database(self, connection, table_name = 'reviews') -> None:
+            values = {
+                'url': self.url,
+                'title': self.title,
+                'description': self.description,
+                'rate': self.rate,
+                'date_of_experience': self.date_of_experience,
+                'user_url': self.user.url,
+                'user_name': self.user.name,
+                'user_reviews_count': self.user.reviews_count,
+                'user_location': self.user.location
+            }
+
+            cursor = connection.cursor()
+            try:
+                cursor.execute(f"""
+                INSERT INTO {table_name} (url, title, description, rate, date_of_experience, user_url, user_name, user_reviews_count, user_location)
+                VALUES (:url, :title, :description, :rate, :date_of_experience, :user_url, :user_name, :user_reviews_count, :user_location)
+                """, values)
+                connection.commit()
+            except sqlite3.IntegrityError:
+                print('RAW IS ALREADY IN DATABASE')
+            cursor.close()
+
+            print('ROW INSERTED')
+
+
+
 
 if __name__ == '__main__':
 
     URL = 'https://uk.trustpilot.com/review/inpost.co.uk?languages=all&page=%s'
 
-    number_of_pages = 100
+    # number_of_pages = 100
+    # pages = {page_no: Page(URL % page_no) for page_no in range(1, number_of_pages+1)}
 
-    pages = {page_no: Page(URL % page_no) for page_no in range(1, number_of_pages+1)}
+    test = Page(URL % 1)
