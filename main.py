@@ -1,5 +1,6 @@
 from classes import Page
 import sqlite3
+import time
 
 conn = sqlite3.connect("reviews.db")
 
@@ -16,5 +17,9 @@ for page_no in range(1, number_of_pages+1):
     page = Page(URL % page_no)
     for review in page.reviews:
         review.insert_into_database(connection=conn)
+
+    print(f'--------------------------PAGE {page_no} --------------------------')
+
+    time.sleep(5)
 
 conn.close()

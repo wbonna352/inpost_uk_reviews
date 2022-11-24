@@ -53,8 +53,10 @@ class Page:
 
         @property
         def description(self):
-            # TODO AttributeError fix
-            return self._section.find('p', {'data-service-review-text-typography': 'true'}).text
+            try:
+                return self._section.find('p', {'data-service-review-text-typography': 'true'}).text
+            except AttributeError:
+                return None
 
         @property
         def date_of_experience(self):
@@ -101,12 +103,15 @@ class Page:
                 INSERT INTO {table_name} (url, title, description, rate, date_of_experience, user_url, user_name, user_reviews_count, user_location)
                 VALUES (:url, :title, :description, :rate, :date_of_experience, :user_url, :user_name, :user_reviews_count, :user_location)
                 """, values)
+                if cursor.lastrowid:
+                    print('ROW INSERTED')
+                else:
+                    print('ROW NOT INSERTED -- I DO NOT KNOW WHY!')
                 connection.commit()
             except sqlite3.IntegrityError:
-                print('RAW IS ALREADY IN DATABASE')
-            cursor.close()
+                print('ROW IS ALREADY IN DATABASE')
 
-            print('ROW INSERTED')
+            cursor.close()
 
 
 
