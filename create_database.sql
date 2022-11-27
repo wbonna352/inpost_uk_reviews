@@ -7,6 +7,6 @@ CREATE TABLE IF NOT EXISTS reviews
     date_of_experience DATE,
     user_url TEXT,
     user_name TEXT,
-    user_reviews_count TEXT,
+    user_reviews_count INT,
     user_location TEXT
 );
